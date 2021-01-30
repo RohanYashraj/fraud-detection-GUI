@@ -1,0 +1,432 @@
+---
+title: "Fraud Detection Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    # vertical_layout: fill
+    # storyboard: true
+    # theme: lumen
+    # theme: readable
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+
+library(flexdashboard)
+library(DT)
+library(shiny)
+library(plotly)
+library(dplyr)
+library(shinyWidgets)
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(zoo)
+library(datasets)
+library(mice)
+library(VIM)
+data(iris)
+load("./data/tree.RData")
+
+```
+
+
+
+Missing Value {data-navmenu="Module 1 - Data Pre-Processing"}
+=====================================
+
+Column {.sidebar}
+-----------------------------------------
+
+```{r}
+options(shiny.maxRequestSize=40*1024^2)
+# Input: Select a file ----
+fileInput("file1", "Choose CSV File",
+          multiple = FALSE,
+          accept = c("text/csv",
+                     "text/comma-separated-values,text/plain",
+                     ".csv"))
+# Horizontal line ----
+tags$hr()
+
+temp <- reactive({
+  
+    req(input$file1)
+    tryCatch(
+      {
+        df <- read.csv(input$file1$datapath)
+      },
+      error = function(e) {
+        stop(safeError(e))
+      }
+    )
+  return(df)
+  
+})
+
+```
+
+Column {.tabset}
+-----------------------------------------------
+
+### Table
+
+```{r}
+
+renderTable({
+  temp()
+})
+```
+
+
+
+### Data Summary
+
+```{r}
+
+# renderTable({
+#   summary(temp())
+# })
+
+data <- read.csv(file = "./data/vehicleMiss.csv", header = T)
+# temp <- str(data)
+summary(data)
+
+# Missing data
+p <- function(x) {sum(is.na(x))/length(x)*100}
+apply(data, 2, p)
+
+
+
+```
+
+### Output
+
+```{r}
+
+md.pattern(data)
+
+```
+
+
+
+Imbalance Dataset {data-navmenu="Module 1 - Data Pre-Processing"}
+=====================================
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+
+options(shiny.maxRequestSize=40*1024^2)
+# Input: Select a file ----
+fileInput("file1", "Choose CSV File",
+          multiple = FALSE,
+          accept = c("text/csv",
+                     "text/comma-separated-values,text/plain",
+                     ".csv"))
+# Horizontal line ----
+tags$hr()
+
+temp <- reactive({
+  
+    req(input$file1)
+    tryCatch(
+      {
+        df <- read.csv(input$file1$datapath)
+      },
+      error = function(e) {
+        stop(safeError(e))
+      }
+    )
+  return(df)
+  
+})
+
+```
+
+
+```{r}
+
+radioButtons('method', 'Methodology', choices = c("SMOTE", "MWMOTE", "ADASYN", "GAN"))
+    
+```
+
+<hr>
+<strong>Imbalanced data </strong> typically refers to a classification problem where the number of observations per class is not equally distributed; often you'll have a large amount of data/observations for one class (referred to as the <strong>majority class</strong>), and much fewer observations for one or more other classes (referred to as the <strong>minority class</strong>)
+
+Column
+-----------------------------------------------------
+
+### Result
+
+```{r}
+
+```
+
+
+Principal Component Analysis {data-navmenu="Module 1 - Data Pre-Processing"}
+=====================================
+
+Column {.sidebar}
+-------------------------------------------------
+
+```{r}
+
+options(shiny.maxRequestSize=40*1024^2)
+# Input: Select a file ----
+fileInput("file1", "Choose CSV File",
+          multiple = FALSE,
+          accept = c("text/csv",
+                     "text/comma-separated-values,text/plain",
+                     ".csv"))
+# Horizontal line ----
+tags$hr()
+
+temp <- reactive({
+  
+    req(input$file1)
+    tryCatch(
+      {
+        df <- read.csv(input$file1$datapath)
+      },
+      error = function(e) {
+        stop(safeError(e))
+      }
+    )
+  return(df)
+  
+})
+
+```
+
+<strong>Principal Component Analysis </strong>is a statistical procedure that uses an orthogonal transformation to convert a set of observations of possibly correlated variables into a set of values of linearly uncorrelated variables called principal components.
+
+Column 
+--------------------------------------------------
+
+### Result
+```{r}
+
+```
+
+
+Clustering {data-navmenu="Module 1 - Data Pre-Processing"}
+=====================================
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+selectInput('xcol', 'X Variable', names(iris))
+    
+selectInput('ycol', 'Y Variable', names(iris),
+                selected=names(iris)[[2]])
+    
+numericInput('clusters', 'Cluster count', 3,
+              min = 1, max = 9)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### K-Means Cluster
+
+```{r}
+palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
+  "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"))
+
+# Combine the selected variables into a new data frame
+selectedData <- reactive({
+  iris[, c(input$xcol, input$ycol)]
+})
+iris
+iris
+clusters <- reactive({
+  kmeans(selectedData(), input$clusters)
+})
+
+renderPlot({
+  par(mar = c(5.1, 4.1, 0, 1))
+  plot(selectedData(),
+       col = clusters()$cluster,
+       pch = 20, cex = 3)
+  points(clusters()$centers, pch = 4, cex = 4, lwd = 4)
+})
+```
+
+
+Rule-Based Model {.hidden}
+=====================================
+
+```{r}
+
+motor <- read_excel("./data/Triggers identified Ver 3.0.xlsx", sheet = "motor")
+health <- read_excel("./data/Triggers identified Ver 3.0.xlsx", sheet = "health")
+life <- read_excel("./data/Triggers identified Ver 3.0.xlsx", sheet = "life")
+
+```
+
+
+Column
+----------------------------------------------
+
+### Motor Insurance
+
+```{r}
+
+renderTable({
+  motor
+})
+
+```
+
+Column
+----------------------------------------------
+
+### Health Insurance
+
+```{r}
+
+renderTable({
+  health
+})
+
+
+```
+
+Column
+----------------------------------------------
+
+### Life Insurance
+
+```{r}
+
+renderTable({
+  life
+})
+
+```
+
+
+
+Actuarial Technique {data-navmenu="Module 2 - Detection Layer"}
+=====================================  
+
+Column {.sidebar}
+-----------------------------------------------
+
+```{r}
+
+radioButtons('act_tech', 'Methodology', choices = c("Extreme Value Theory", "Rule-Based Engine"))
+
+```
+
+<hr>
+The idea is to consider modelling of risks with <strong>low frequency but high severity</strong>. Low frequency/ high severity events can have a devastating impact on companies and investment funds. However, their low frequency means that little data exists to model their effects accurately.
+<p>
+However, there is a class of fraud which are completely <strong>opposite in nature</strong> i.e. low severity but high-frequency claims. A different approach needs to be adopted to model such claims.
+<p>
+Link to [Rule-Based Model]
+
+Column
+-----------------------------------------------
+
+```{r}
+
+options(shiny.maxRequestSize=40*1024^2)
+# Input: Select a file ----
+fileInput("file1", "Choose CSV File",
+          multiple = FALSE,
+          accept = c("text/csv",
+                     "text/comma-separated-values,text/plain",
+                     ".csv"))
+# Horizontal line ----
+tags$hr()
+
+input_for_rule_engine <- reactive({
+  
+    req(input$file1)
+    tryCatch(
+      {
+        df <- read.csv(input$file1$datapath)
+      },
+      error = function(e) {
+        stop(safeError(e))
+      }
+    )
+  return(df)
+  
+})
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+
+
+AI Technology {data-navmenu="Module 2 - Detection Layer"}
+=====================================  
+
+Column {.sidebar}
+-----------------------------------------------
+
+```{r}
+
+radioButtons('ai_tech', 'Methodology', choices = c("Gradient Boosting Method", "Neural Networks"))
+
+
+```
+
+<hr>
+<strong>Gradient Boosting </strong>is a <strong>machine learning </strong>technique for regression and classification problems, which produces a prediction model in the form of an ensemble of weak prediction models, typically decision trees
+<hr>
+A <strong>neural network</strong> is a series of algorithms that endeavors to recognize underlying relationships in a set of data through a process that mimics the way the human brain operates.
+
+
+
+Graphs {data-navmenu="Module 3 - Outcome" .storyboard}
+=====================================  
+
+### Frame 1
+
+```{r}
+
+```
+
+
+### Frame 2
+
+```{r}
+
+
+```
+
+### Frame 3
+
+```{r}
+
+```
+
+
+
+Tables {data-navmenu="Module 3 - Outcome" .storyboard}
+=====================================  
+
+
+
+
+
+
+Recommendations {data-navmenu="Module 3 - Outcome"}
+===================================== 
+
+
